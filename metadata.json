@@ -1,0 +1,6 @@
+{
+  "name": "Social Content Engine",
+  "description": "A sophisticated social media management dashboard for local businesses, transforming the content creation process into a simple approval-based workflow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
