@@ -8,12 +8,24 @@ export const Approvals = () => {
   const [selectedPost, setSelectedPost] = useState<ContentPost | null>(null);
 
   useEffect(() => {
-    dataService.getPosts().then(p => setPosts(p.filter(post => post.status === 'PENDING')));
+    dataService.getPosts().then(p => setPosts(p.filter(post => post.status === 'CLIENT_REVIEW')));
   }, []);
+
+  const handleApproveAll = () => {
+    if (confirm(`Approve all ${posts.length} posts currently ready for approval?`)) {
+        // Here we would implement the bulk update via Teable API
+        alert('Approving all posts...');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Approvals Queue</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Approvals Queue</h2>
+        <button onClick={handleApproveAll} className="px-6 py-2 bg-[#A3E4D7] text-white rounded-lg hover:bg-[#86D6C7]">
+            Approve All ({posts.length})
+        </button>
+      </div>
       <p className="text-gray-500">{posts.length} posts waiting for review.</p>
       <div className="space-y-4">
         {posts.map(post => (

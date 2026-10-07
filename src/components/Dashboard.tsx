@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { dataService } from '../data/dataService';
 import { ContentPost, StrategyType } from '../types';
 import { useSession } from '../context/SessionContext';
+import { StrategyHealth } from './StrategyHealth';
+import { TimeSaved } from './TimeSaved';
 
 export const Dashboard = () => {
   const { mode } = useSession();
@@ -9,7 +11,6 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Pass mode to dataService if needed, or handle inside here
     dataService.getPosts().then(p => {
         setPosts(p);
         setLoading(false);
@@ -59,6 +60,11 @@ export const Dashboard = () => {
             <div className="text-sm text-gray-500 mt-2">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <StrategyHealth health="Healthy balance" />
+        <TimeSaved hours={60} />
       </div>
 
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
