@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { QuestionnaireContextLevel, OnboardingFlowState, StrategyDistribution } from '../types';
+import { OnboardingLevelSelector } from './OnboardingLevelSelector';
 import { QuestionnaireWizard } from './QuestionnaireWizard';
 import { StrategyOverview } from './StrategyOverview';
 import { CalendarView } from './CalendarView';
-import { CheckCircle2, Loader2 } from 'lucide-react';
-import { WORKSHOP_QUESTIONNAIRE_SECTIONS } from '../data/workshopQuestionnaireData';
+import { CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { QUESTIONNAIRE_SECTIONS, LEVEL_METADATA } from '../data/questionnaireData';
+import { getWorkshopDemoPrefillForBuildStrategy } from '../data/workshopQuestionnaireData';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -14,7 +16,7 @@ interface OnboardingFlowProps {
 export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowProps) => {
   const [state, setState] = useState<OnboardingFlowState>({
     step: 'welcome',
-    selectedLevel: 'build_strategy' as QuestionnaireContextLevel,
+    selectedLevel: null,
     questionnaireCompleted: false,
     strategyConfirmed: false,
     clientId: null,
@@ -32,9 +34,19 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
   });
   const [isDemoMode] = useState(demoMode);
 
-  // Get workshop questionnaire sections
+  // Get sections for current level
   const currentSections = useMemo(() => {
-    return WORKSHOP_QUESTIONNAIRE_SECTIONS;
+    if (!state.selectedLevel) return [];
+    return QUESTIONNAIRE_SECTIONS[state.selectedLevel];
+  }, [state.selectedLevel]);
+
+  // Handle level selection
+  const handleLevelSelect = useCallback((level: QuestionnaireContextLevel) => {
+    setState(prev => ({
+      ...prev,
+      step: 'questionnaire',
+      selectedLevel: level,
+    }));
   }, []);
 
   // Handle questionnaire save
@@ -42,11 +54,11 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
     setQuestionnaireResponses(responses);
     if (isDemoMode) {
       localStorage.setItem('questionnaireResponses', JSON.stringify(responses));
-      localStorage.setItem('questionnaireLevel', 'build_strategy');
+      localStorage.setItem('questionnaireLevel', state.selectedLevel || '');
     } else {
       console.log('Saving questionnaire responses:', responses);
     }
-  }, [isDemoMode]);
+  }, [isDemoMode, state.selectedLevel]);
 
   // Handle questionnaire submit
   const handleQuestionnaireSubmit = useCallback(async (responses: Record<string, string>) => {
@@ -71,6 +83,21 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
     }
   }, [isDemoMode]);
 
+  // Handle workshop demo pre-fill
+  const handleWorkshopDemo = useCallback(() => {
+    const prefillData = getWorkshopDemoPrefillForBuildStrategy();
+    setQuestionnaireResponses(prefillData);
+    if (isDemoMode) {
+      localStorage.setItem('questionnaireResponses', JSON.stringify(prefillData));
+      localStorage.setItem('questionnaireLevel', 'build_strategy');
+    }
+    setState(prev => ({
+      ...prev,
+      step: 'questionnaire',
+      selectedLevel: 'build_strategy',
+    }));
+  }, [isDemoMode]);
+
   // Handle strategy confirmation
   const handleStrategyConfirm = useCallback((distribution: StrategyDistribution) => {
     setStrategyDist(distribution);
@@ -80,6 +107,8 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
       strategyConfirmed: true,
     }));
   }, []);
+
+  // Handle calendar view - defined inline where used
 
   const handleComplete = useCallback(() => {
     onComplete();
@@ -101,6 +130,7 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
 
   const currentStep = state.step;
   const isWelcome = currentStep === 'welcome';
+  const isSelectLevel = currentStep === 'select_level';
   const isQuestionnaire = currentStep === 'questionnaire';
   const isStrategy = currentStep === 'strategy';
   const isCalendar = currentStep === 'calendar';
@@ -113,13 +143,13 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
         <div className="max-w-6xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Workshop Setup</span>
+              <span className="text-sm font-medium text-gray-700">Onboarding</span>
               <div className="flex gap-1">
-                {['welcome', 'questionnaire', 'strategy', 'calendar', 'complete'].map((step, index) => (
+                {['welcome', 'select_level', 'questionnaire', 'strategy', 'calendar', 'complete'].map((step, index) => (
                   <div 
                     key={step}
                     className={`w-8 h-1 rounded-full transition-all duration-300 ${
-                      ['welcome', 'questionnaire', 'strategy', 'calendar', 'complete'].indexOf(state.step) >= index
+                      ['welcome', 'select_level', 'questionnaire', 'strategy', 'calendar', 'complete'].indexOf(state.step) >= index
                         ? 'bg-emerald-500'
                         : 'bg-gray-200'
                     }`}
@@ -157,27 +187,57 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                     </div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">Tournament Content Engine</h1>
+                    <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to Social Content Engine</h1>
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                      Create a month of strategic social media content for your beach volleyball tournament. 
+                      Create a month of strategic social media content in minutes. 
                       Answer a few questions, review your strategy, and approve your calendar.
+                    </p>
+                    <p className="text-sm text-amber-600 mt-4 max-w-2xl mx-auto">
+                      <strong>Workshop demo:</strong> Try a pre-filled beach volleyball tournament example to see how questionnaire answers personalize your content.
                     </p>
                   </div>
                   
                   <div className="space-y-4">
                     <button
-                      onClick={() => setState(prev => ({ ...prev, step: 'questionnaire' }))}
-                      className="w-full md:w-1/2 mx-auto py-4 px-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold text-lg hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/30"
+                      onClick={() => setState(prev => ({ ...prev, step: 'select_level' }))}
+                      className="w-full md:w-1/3 mx-auto py-4 px-8 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold text-lg hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/30"
                     >
                       Get Started
                     </button>
                     <button
-                      onClick={() => setState(prev => ({ ...prev, step: 'questionnaire', isDemoMode: false }))}
-                      className="w-full md:w-1/2 mx-auto py-4 px-8 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={handleWorkshopDemo}
+                      className="w-full md:w-1/3 mx-auto py-4 px-8 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold text-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
+                    >
+                      <Zap className="w-5 h-5" />
+                      Try Workshop Demo
+                    </button>
+                    <button
+                      onClick={() => setState(prev => ({ ...prev, step: 'select_level', isDemoMode: false }))}
+                      className="w-full md:w-1/3 mx-auto py-4 px-8 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Continue without demo
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Select Level Step */}
+            {isSelectLevel && (
+              <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+                <div className="max-w-4xl w-full">
+                  <div className="text-center mb-10">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">How much should the AI know?</h1>
+                    <p className="text-gray-600 max-w-2xl mx-auto">
+                      The more context you give, the more your content sounds like <em>you</em>.
+                    </p>
+                  </div>
+                  
+                  <OnboardingLevelSelector 
+                    onSelect={handleLevelSelect}
+                    currentLevel={state.selectedLevel ?? undefined}
+                    levelMetadata={LEVEL_METADATA}
+                  />
                 </div>
               </div>
             )}
@@ -187,11 +247,11 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
               <div className="flex-1">
                 <QuestionnaireWizard
                   sections={currentSections}
-                  level="build_strategy"
+                  level={state.selectedLevel || 'build_strategy'}
                   initialResponses={questionnaireResponses}
                   onSave={handleQuestionnaireSave}
                   onSubmit={handleQuestionnaireSubmit}
-                  onBack={() => setState(prev => ({ ...prev, step: 'welcome' }))}
+                  onBack={() => setState(prev => ({ ...prev, step: 'select_level' }))}
                   onNext={() => {}}
                   canGoBack={true}
                   isSubmitting={isLoading}
@@ -263,7 +323,7 @@ export const OnboardingFlow = ({ onComplete, demoMode = true }: OnboardingFlowPr
         {/* Footer */}
         <footer className="border-t border-gray-100 py-6 mt-auto">
           <div className="max-w-6xl mx-auto px-6 text-center text-sm text-gray-500">
-            <p>Tournament Content Engine — Your entire month of strategic social media, planned and ready for approval.</p>
+            <p>Social Content Engine — Your entire month of strategic social media, planned and ready for approval.</p>
           </div>
         </footer>
       </div>

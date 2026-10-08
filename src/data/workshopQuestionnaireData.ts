@@ -359,3 +359,53 @@ export const WORKSHOP_LEVEL_METADATA = {
   isRecommended: true,
   sections: WORKSHOP_QUESTIONNAIRE_SECTIONS.length
 } as const;
+
+// ============================================
+// WORKSHOP DEMO PRE-FILL DATA
+// Maps tournament answers to build_strategy questionnaire format
+// ============================================
+
+export const WORKSHOP_DEMO_PREFILL: Record<string, string> = {
+  // Business Identity
+  business_name: 'Playa Beach Volleyball Tournament',
+  business_location: 'Playa del Carmen, Quintana Roo, Mexico',
+  business_website: 'https://playabeachvolleyball.com',
+  what_you_do: 'Annual international beach volleyball tournament held in Playa del Carmen, Mexico, featuring competitive and recreational divisions for players from around the world.',
+  industry: 'Sports & Events / Tourism',
+
+  // Customer Insights
+  target_audience: 'Competitive and recreational beach volleyball players aged 18-45 from Mexico, USA, Canada, and Europe. Includes college/club alumni, recreational league players, and first-time tournament participants. Values: community, competition, travel, beach lifestyle.',
+  main_problem: 'Players struggle to find well-organized international beach volleyball tournaments in prime beach destinations during winter months. Many tournaments are poorly organized, lack professional infrastructure, or are in less desirable locations.',
+  main_desire: 'A professionally run, world-class beach volleyball tournament in a stunning Caribbean location with great competition, social events, and a vacation atmosphere.',
+  common_questions: 'What skill divisions are offered? What\'s included in registration? Where do players stay? Is there a refund policy? Can I register as a free agent? What\'s the competition format?',
+  common_objections: 'Travel costs to Mexico, February dates conflict with indoor volleyball season, uncertainty about skill level fit, concerns about tournament organization quality, safety concerns in Mexico.',
+
+  // Expertise Areas
+  primary_offer: 'Tournament registration packages: 4-person co-ed ($450/team), 2-person men\'s/women\'s ($300/team). Includes: 4+ days competition, welcome party, player lounge, live streaming, awards ceremony, sponsor village access.',
+  secondary_offers: 'Early bird pricing (save $50/team by Jan 15), free agent matching service, spectator passes, VIP packages with premium seating and exclusive events.',
+  expertise_topics: 'Beach volleyball tournament organization, international sports event management, player experience design, beach volleyball technique, tournament logistics, sports tourism in Mexico.',
+
+  // Brand Personality
+  brand_personality: 'Energetic, welcoming, professional but not stiff. Like a friend inviting you to the best beach week of the year. Community-first, player-focused, authentic.',
+  brand_tone: 'Energetic and welcoming - like a friend inviting you to the best beach week of the year. Professional but not stiff. Community-first. Uses contractions, conversational.',
+  words_to_use: 'Epic, vibes, sandy toes, beach life, tournament mode, good vibes only, paradise found, serve it up, dig deep, championship energy.',
+
+  // Workshop-specific fields (these don't directly map but provide context)
+  // Content boundaries / prohibited topics
+  content_boundaries: 'No political commentary, no comments on other tournaments, no medical/health claims, no speculation on weather, no sponsor criticism, no negative comments about competitors or other tournaments.',
+  // Accuracy requirements
+  accuracy_requirements: 'Tournament dates (Feb 14-21, 2027), registration deadline, prices per team, venue address, registration link, contact email, division rules, refund policy.',
+  // CTA
+  primary_cta: 'Visit the website for more information and registration.',
+  // Prohibited topics
+  prohibited_topics: 'No political commentary, no medical/health claims, no sponsor criticism, no negative comments about other tournaments, no weather guarantees, no unverified attendance numbers.',
+} as const;
+
+// Helper to apply workshop demo pre-fill to build_strategy questionnaire
+export function getWorkshopDemoPrefillForBuildStrategy(): Record<string, string> {
+  return WORKSHOP_DEMO_PREFILL;
+}
+
+export function getWorkshopDemoPrefillKeys(): string[] {
+  return Object.keys(WORKSHOP_DEMO_PREFILL);
+}
