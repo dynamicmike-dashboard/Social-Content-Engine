@@ -14,9 +14,9 @@
 2. **Calendar View** - Monthly grid with posts, click to open detail
 3. **Content Detail Modal** - Platform tabs (FB, IG, LI, TW), inline editing, approval actions
 4. **Approvals Queue** - Filterable list with inline approve/reject/regenerate
-5. **Strategy Overview** - Adjustable distribution (8/6/5/5/6), generate button
-6. **Business Profile** - 6-section questionnaire (28 questions total)
-7. **Auth System** - Demo mode + placeholder for real auth
+6. **Strategy Overview** - Adjustable distribution (8/6/5/5/6), generate button
+7. **Business Profile** - 6-section questionnaire (28 questions total)
+8. **Auth System** - Demo mode + placeholder for real auth
 8. **Teable Integration** - Service layer with typed field IDs
 
 ### Data Model (Types)
@@ -169,3 +169,99 @@
 ### Config
 - `vite.config.ts` - PWA manifest updates
 - `.env.example` - Document all required vars
+
+---
+
+## 10. Future Roadmap: White-Label Agency Platform
+
+### Long-Term Product Vision
+
+The Social Content Engine is intended to evolve from a single-business content tool into a **white-label SaaS platform for marketing agencies, consultants and other service providers**.
+
+Agencies should be able to use the platform under their own brand, configure their own AI provider credentials, add and manage their own clients, and determine what they charge their clients.
+
+The platform owner operates the underlying SaaS infrastructure. Each agency operates its own branded service within that platform.
+
+### Required White-Label Capabilities
+
+#### Agency Accounts and Branding
+- Each agency has its own organisation/account.
+- Agencies can configure their business name, logo, colours, branding and other supported white-label settings.
+- Custom domains or subdomains should be considered in the architecture.
+- Agency branding should be applied consistently across the interface and relevant client-facing experiences.
+- The platform owner's administration remains separate from agency administration.
+
+#### Agency-Managed Clients
+- Agencies can create, invite, manage and deactivate their own client accounts.
+- Each client has its own business profile, questionnaires, brand guidelines, content plans, assets, campaigns, approvals and generation history.
+- Agencies can manage multiple clients without their data or settings becoming mixed.
+- Appropriate roles and permissions are required for platform administrators, agency administrators, agency staff and agency clients.
+
+#### Agency-Provided LLM API Credentials
+- Agencies should be able to configure their own supported LLM provider and API key.
+- The architecture should support multiple providers and models where practical, rather than assuming one permanently fixed provider.
+- Provider credentials must be handled securely on the server side. Never expose API keys in browser code, client-side configuration, logs or generated content.
+- Store secrets encrypted using an appropriate secrets-management approach. Do not store plaintext API keys in ordinary business records.
+- Validate credentials securely and provide clear status, usage and error reporting.
+- Keep each agency's provider configuration isolated from other agencies.
+- Design for future support of provider/model selection, fallback rules and per-agency usage limits.
+
+#### Agency Pricing and Commercial Control
+- Each agency can define its own service packages, prices, billing intervals and client entitlements.
+- Agencies should be able to charge their own clients independently of the platform owner's pricing model.
+- The platform should eventually support subscription or usage-based commercial models where appropriate.
+- Keep agency-to-client pricing separate from the platform's charges to agencies.
+- Record usage and estimated AI costs by agency and, where appropriate, by client.
+- Do not assume a payment processor or implement payment collection until that phase is explicitly approved.
+
+### Mandatory Tenant Isolation and Security
+
+Treat multi-tenancy as a core architectural requirement, not a feature to bolt on later.
+
+- Every agency-owned record must have an enforceable ownership relationship.
+- Client records must belong to the correct agency and client.
+- The backend must derive permitted agency and client scope from the authenticated session and verified membership.
+- Never trust a browser-supplied agency ID or client ID as proof of access.
+- Enforce authorisation on every relevant server-side read, write, generation request, asset operation and administrative action.
+- Prevent cross-agency access to business profiles, content, uploaded assets, prompts, API credentials, usage data and billing records.
+- Include explicit tests for unauthorised and cross-tenant access.
+- Keep platform-owner administrative privileges separate and auditable.
+
+### How This Affects Phase 2
+
+Phase 2 must continue to focus on the current agreed work: stabilising the existing application and creating a modular, reusable prompt catalogue.
+
+Do not allow the white-label vision to derail the current repair work or workshop demonstration.
+
+However, Phase 2 must review the current data structures and prompt architecture for future multi-tenant compatibility.
+
+In particular:
+- Avoid assuming there will only ever be one agency or one business.
+- Avoid hard-coding the current business, tournament or workshop demo into reusable prompt definitions.
+- Keep reusable prompt templates separate from agency-specific brand rules, client data and campaign information.
+- Ensure prompts receive only the authenticated agency's and client's authorised context.
+- Keep provider configuration separate from prompt definitions so agencies can eventually select their own LLM provider.
+- Design usage tracking so generation costs can eventually be attributed to the correct agency and client.
+- Identify any existing assumptions that would make white-labelling difficult later.
+
+Do not implement a new authentication system, billing system, API-key management interface or full multi-tenant conversion merely to satisfy this documentation update. Report architectural conflicts and propose a staged implementation plan.
+
+### Future Roadmap Milestones
+
+Record white-label capability as a formal future product milestone, after the current application has been stabilised and the core content-generation workflow is verified.
+
+The future milestone should include:
+
+1. Multi-tenant architecture and agency/client data model.
+2. Agency and client authentication, roles and permissions.
+3. Secure agency-level LLM credential management.
+4. White-label branding and configuration.
+5. Agency-managed client onboarding and management.
+6. Usage metering, cost attribution and limits.
+7. Agency-defined packages, pricing and billing integration.
+8. Cross-tenant security tests.
+9. Agency acceptance testing and production readiness.
+
+The order may be refined after reviewing the existing authentication, database and service architecture.
+
+---

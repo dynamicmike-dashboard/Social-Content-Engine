@@ -98,9 +98,9 @@ After creating the above tables/fields, update the **Client** permission role:
 
 1. **Generation Jobs**: Client role can READ own jobs (filter by Client ID)
 2. **Client Memberships**: Client role can READ own membership (filter by Client ID)
-3. **Content Calendar**: Add edit access to new generation fields
-4. **Content Assets**: Add edit access to Asset Order
-5. **Approval Activity**: Add read access to new actor fields
+2. **Content Calendar**: Add edit access to new generation fields
+3. **Content Assets**: Add edit access to Asset Order
+3. **Approval Activity**: Add read access to new actor fields
 
 **Important:** The Client permission role activation must be completed in Teable (was not run in previous session). Run the enable command before granting collaborator access.
 
@@ -121,3 +121,214 @@ After creating the above tables/fields, update the **Client** permission role:
 ## Questionnaire Template (28 Questions - Ready to Provision)
 
 See `social-media-api-schema-current.json` for the complete template with question numbers, categories, and required flags. Provision exactly once per real client using the (Client ID, Question Number) unique constraint.
+
+---
+
+## 7. White-Label Agency Tables (Future Milestone)
+
+These tables support the white-label agency platform vision where agencies operate their own branded service within the platform.
+
+### 7.1 Agencies Table
+**Suggested Name:** `Agencies`
+**Purpose:** Top-level agency organisation record
+
+| Field Name | Type | Options |
+|---|---|---|
+| Agency ID | Formula | RECORD_ID() |
+| Agency Name | Single Line Text | Required |
+| Agency Slug | Single Line Text | Unique, for subdomain routing |
+| Logo | Attachment | Optional |
+| Primary Colour | Single Line Text | Hex colour code |
+| Secondary Colour | Single Line Text | Hex colour code |
+| Logo Position | Single Select | LEFT, CENTER, RIGHT |
+| Custom Domain | Single Line Text | Optional, verified |
+| Subdomain | Single Line Text | Unique, for agency.app.domain |
+| Default Time Zone | Single Select | e.g., America/Cancun |
+| Default Currency | Single Select | MXN, USD, EUR |
+| White-Label Settings | Long Text | JSON for advanced branding |
+| Status | Single Select | ACTIVE, SUSPENDED, TRIAL |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Views needed:**
+- Active Agencies (filter: Status = ACTIVE)
+- By Subdomain (group by Subdomain)
+
+---
+
+### 7.2 Agency LLM Credentials Table
+**Suggested Name:** `Agency LLM Credentials`
+**Purpose:** Securely store each agency's LLM provider credentials
+
+| Field Name | Type | Options |
+|---|---|---|
+| Credential ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Provider | Single Select | OPENAI, ANTHROPIC, GOOGLE, AZURE, CUSTOM |
+| Model | Single Line Text | e.g., "gpt-4", "claude-3-opus" |
+| API Key (Encrypted) | Long Text | Encrypted at rest |
+| Base URL | Single Line Text | Optional, for custom endpoints |
+| Max Tokens | Number | Default 4096 |
+| Temperature | Number | Default 0.7 |
+| Status | Single Select | ACTIVE, INACTIVE, ROTATING |
+| Last Validated At | Date Time | |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Security:** API Key field must be encrypted at rest. Decryption only in secure serverless function context.
+
+**Views needed:**
+- Active Credentials (filter: Status = ACTIVE)
+- By Agency (group by Agency ID)
+
+---
+
+### 7.3 Agency Clients Table (extends Clients)
+**Suggested Name:** `Agency Clients` (or extend existing Clients table)
+**Purpose:** Maps clients to their managing agency
+
+| Field Name | Type | Options |
+|---|---|---|
+| Client ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Client Name | Single Line Text | |
+| Business Name | Single Line Text | |
+| Contact Email | Email | |
+| Status | Single Select | ACTIVE, ONBOARDING, SUSPENDED, ARCHIVED |
+| Package ID | Link (many-to-one → Agency Packages) | Optional |
+| Assigned Staff | Link (many-to-many → Agency Staff) | Optional |
+| Onboarding Started At | Date Time | |
+| Onboarding Completed At | Date Time | |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Constraints:** Unique on (Agency ID, Client Email)
+**Views needed:**
+- Active Clients by Agency (group by Agency ID)
+- Onboarding Pipeline (group by Status)
+
+---
+
+### 7.4 Agency Packages Table
+**Suggested Name:** `Agency Packages`
+**Purpose:** Agency-defined service packages with pricing
+
+| Field Name | Type | Options |
+|---|---|---|
+| Package ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Package Name | Single Line Text | e.g., "Starter", "Growth", "Enterprise" |
+| Description | Long Text | |
+| Monthly Price (MXN) | Number | |
+| Monthly Price (USD) | Number | |
+| Posts Per Month | Number | |
+| Platforms Included | Multi Select | FB, IG, LI, TW, TK |
+| Features | Long Text | JSON array of feature flags |
+| Is Active | Checkbox | Default true |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Views needed:**
+- Active Packages by Agency (filter: Agency ID, Is Active = true)
+
+---
+
+### 7.5 Agency Staff Table
+**Suggested Name:** `Agency Staff`
+**Purpose:** Agency team members with roles
+
+| Field Name | Type | Options |
+|---|---|---|
+| Staff ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Auth Issuer | Single Line Text | e.g., "clerk", "auth0" |
+| Auth Subject | Single Line Text | Auth provider's user ID |
+| Email | Email | |
+| Name | Single Line Text | |
+| Role | Single Select | AGENCY_ADMIN, CONTENT_MANAGER, APPROVER, VIEWER |
+| Status | Single Select | ACTIVE, INVITED, REVOKED |
+| Invited At | Date Time | |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Constraints:** Unique on (Auth Issuer, Auth Subject, Agency ID)
+**Views needed:**
+- Active Staff (filter: Status = ACTIVE)
+- By Agency (group by Agency ID)
+
+---
+
+### 7.6 Agency Usage & Billing Table
+**Suggested Name:** `Agency Usage`
+**Purpose:** Track AI generation usage and costs per agency/client
+
+| Field Name | Type | Options |
+|---|---|---|
+| Usage ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Client ID | Link (many-to-one → Agency Clients) | Required |
+| Period Start | Date | |
+| Period End | Date | |
+| Posts Generated | Number | Default 0 |
+| AI Tokens Used | Number | Default 0 |
+| Estimated Cost (MXN) | Number | Default 0 |
+| Estimated Cost (USD) | Number | Default 0 |
+| Generation Jobs Count | Number | Default 0 |
+| Regeneration Count | Number | Default 0 |
+| Created At | Created Time | |
+
+**Views needed:**
+- Monthly Usage by Agency (group by Agency ID, Period)
+- Monthly Usage by Client (group by Client ID, Period)
+- Cost Attribution Report
+
+---
+
+### 7.7 Agency Branding Assets Table
+**Suggested Name:** `Agency Branding Assets`
+**Purpose:** Store agency-specific brand assets
+
+| Field Name | Type | Options |
+|---|---|---|
+| Asset ID | Formula | RECORD_ID() |
+| Agency ID | Link (many-to-one → Agencies) | Required |
+| Asset Type | Single Select | LOGO, FAVICON, COLOUR_PALETTE, FONT, TEMPLATE |
+| Asset URL | Attachment | |
+| Asset Name | Single Line Text | |
+| Is Default | Checkbox | Default false |
+| Created At | Created Time | |
+| Updated At | Last Modified Time | |
+
+**Views needed:**
+- Default Assets by Agency (filter: Is Default = true)
+- All Assets by Agency (group by Agency ID)
+
+---
+
+### Permission Role Updates for White-Label
+
+After creating the above tables, update/create the following permission roles:
+
+1. **Agency Admin Role**: Full access to their agency's data (clients, packages, staff, usage, branding)
+2. **Agency Content Manager**: Create/edit content, manage approvals, view analytics
+3. **Agency Approver**: Approve/reject content, view calendar
+4. **Agency Viewer**: Read-only access to calendar, analytics
+5. **Client Role**: View own content calendar, approve/reject own posts, view own analytics
+
+**Important:** All new tables must have Client ID / Agency ID ownership enforced at the API layer. Permission roles in Teable must be configured to filter by Agency ID where appropriate.
+
+---
+
+### Migration Notes
+
+When provisioning a new agency:
+1. Create Agency record
+2. Create Agency LLM Credentials (agency provides API key)
+3. Create default Agency Package(s)
+4. Create default Branding Assets (logo, colours)
+5. Invite Agency Admin staff
+6. Agency adds their Clients
+9. Clients complete Questionnaire
+10. Generate first month's content
+
+The existing Client table and Content Calendar tables remain the core content tables, now linked to Agency Clients rather than being top-level.

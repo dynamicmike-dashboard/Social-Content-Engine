@@ -1,59 +1,87 @@
 import { ContentPost, StrategyName, PlatformContent, ContentFormat, ContentStatus } from '../types';
+import { WorkshopContentContext, transformQuestionnaireToContext, getTopicsForStrategy } from './workshopContentContext';
 
 const STRATEGY_ORDER: StrategyName[] = ['EDUCATE', 'ENGAGE', 'AUTHORITY', 'STORY', 'PROMOTE'];
 const FORMATS: ContentFormat[] = ['IMAGE', 'CAROUSEL', 'SHORT_VIDEO', 'REEL', 'TEXT', 'STORY', 'POLL', 'QUESTION'];
 
-function generatePlatformContent(strategy: StrategyName, _day: number, topic: string): Record<string, PlatformContent> {
-  const baseTopic = topic.toLowerCase();
+// Get workshop content context from localStorage (if available)
+function getWorkshopContext(): WorkshopContentContext | null {
+  if (typeof window === 'undefined') return null;
   
+  try {
+    const savedResponses = localStorage.getItem('questionnaireResponses');
+    const savedLevel = localStorage.getItem('questionnaireLevel');
+    
+    if (savedResponses && savedLevel === 'build_strategy') {
+      const responses = JSON.parse(savedResponses);
+      return transformQuestionnaireToContext(responses);
+    }
+  } catch (e) {
+    console.warn('Failed to load workshop context:', e);
+  }
+  return null;
+}
+
+// Generate personalized platform content based on workshop context
+function generatePersonalizedPlatformContent(
+  strategy: StrategyName, 
+  _day: number, 
+  topic: string, 
+  context: WorkshopContentContext
+): Record<string, PlatformContent> {
+  const baseTopic = topic.toLowerCase();
+  const eventName = context.eventName;
+  const eventLocationShort = context.eventLocation.split(',')[0];
+  
+  // Base platform content templates with personalization
   const platformContent: Record<string, PlatformContent> = {
     FACEBOOK: {
-      hook: `🌟 Discover how ${baseTopic} can transform your business — Read our latest insights!`,
-      caption: `At our studio, we believe ${baseTopic} is essential for growth. Here's why...\n\nWe've helped hundreds of clients achieve amazing results by focusing on what matters most. Want to know our secret? Link in bio! 👇\n\n#BusinessGrowth #Entrepreneurship #SuccessTips #LocalBusiness`,
+      hook: `🌟 Discover how ${topic} transforms your ${eventName} experience — Read our latest insights!`,
+      caption: `At ${eventName}, we believe ${baseTopic} is essential for an epic tournament experience. Here's why...\n\nWe've helped hundreds of players achieve amazing results by focusing on what matters most. Want to know our secret? Link in bio! 👇\n\n#${eventName.replace(/\s+/g, '')} #BeachVolleyball #PlayaDelCarmen #TournamentLife`,
       cta: 'Read Full Article',
-      hashtags: '#BusinessGrowth #Entrepreneurship #SuccessTips #LocalBusiness',
+      hashtags: `#${eventName.replace(/\s+/g, '')} #BeachVolleyball #PlayaDelCarmen #TournamentLife`,
       ctaType: 'DIRECT_LINK',
-      ctaValue: 'https://example.com/article',
-      ctaReason: 'Directs traffic to blog for deeper engagement and lead capture',
-      visualConcept: `Professional lifestyle photo showing ${baseTopic} in action, warm lighting, diverse team collaborating`,
+      ctaValue: 'https://playabeachvolleyball.com/article',
+      ctaReason: 'Directs traffic to tournament website for deeper engagement and registration',
+      visualConcept: `Professional lifestyle photo showing ${baseTopic} in action at ${eventLocationShort}, warm Caribbean lighting, diverse players competing`,
       visualDimensions: '1200x630 (link share) / 1080x1080 (feed)',
       format: 'IMAGE',
       platformNotes: 'Optimized for link sharing; use engaging thumbnail; first 125 chars critical',
       alternativeHooks: []
     },
     INSTAGRAM: {
-      hook: `✨ ${topic} changed everything for us!`,
-      caption: `Swipe to see the transformation 👉 \n\n${baseTopic} isn't just a strategy — it's a mindset shift. We've seen clients go from stuck to scaling using this exact approach.\n\nSave this post for later! 💾\n\n#BusinessGrowth #EntrepreneurLife #SmallBusiness #Inspiration #Mindset #GrowthMindset #BusinessTips`,
+      hook: `✨ ${topic} changed everything for our tournament experience!`,
+      caption: `Swipe to see the transformation 👉 \n\n${baseTopic} isn't just a strategy — it's a mindset shift. We've seen players go from nervous first-timers to tournament champions using this exact approach.\n\nSave this post for later! 💾\n\n#${eventName.replace(/\s+/g, '')} #BeachVolleyballLife #PlayaDelCarmen #TournamentVibes #BeachLife #VolleyballCommunity`,
       cta: 'Save for Later',
-      hashtags: '#BusinessGrowth #EntrepreneurLife #SmallBusiness #Inspiration #Mindset #GrowthMindset #BusinessTips',
+      hashtags: `#${eventName.replace(/\s+/g, '')} #BeachVolleyballLife #PlayaDelCarmen #TournamentVibes #BeachLife #VolleyballCommunity #SportsEvents`,
       ctaType: 'KEYWORD',
       ctaValue: 'SAVE',
       ctaReason: 'Triggers DM automation with saved content delivery',
-      visualConcept: `Carousel: 1) Before/After split 2) Key statistic 3) Client quote 4) Step-by-step 5) CTA`,
+      visualConcept: `Carousel: 1) Before/After player journey 2) Key tournament statistic 3) Player quote 3) Step-by-step guide 4) CTA to register`,
       visualDimensions: '1080x1080 (feed) / 1080x1920 (reels)',
       format: 'CAROUSEL',
       platformNotes: 'Carousel format for swipe-through; save CTA triggers automation; use 30+ hashtags in first comment',
       alternativeHooks: []
     },
     LINKEDIN: {
-      hook: `Industry Insight: Why ${topic} matters more than ever for B2B growth`,
-      caption: `In today's competitive landscape, ${baseTopic} isn't just an option—it's a necessity. Our research shows businesses that prioritize this see 40% better engagement.\n\nHere's our 3-step framework:\n1️⃣ Identify the gap\n2️⃣ Build the system\n3️⃣ Measure & iterate\n\nWhat's your biggest challenge with ${baseTopic}? Comment below 👇\n\n#BusinessStrategy #Leadership #IndustryInsights #ProfessionalDevelopment #B2BGrowth`,
+      hook: `Industry Insight: Why ${topic} matters more than ever for sports tournament growth`,
+      caption: `In today's competitive sports event landscape, ${baseTopic} isn't just an option—it's a necessity. Our research shows tournaments that prioritize this see 40% better player retention.\n\nHere's our 3-step framework:\n1️⃣ Identify the player need\n2️⃣ Build the tournament experience\n3️⃣ Measure & iterate\n\nWhat's your biggest challenge with ${baseTopic}? Comment below 👇\n\n#SportsEvents #EventManagement #BeachVolleyball #SportsBusiness #TournamentOrganization`,
       cta: 'Connect with us',
-      hashtags: '#BusinessStrategy #Leadership #IndustryInsights #ProfessionalDevelopment #B2BGrowth',
+      hashtags: '#SportsEvents #EventManagement #BeachVolleyball #SportsBusiness #TournamentOrganization',
       ctaType: 'CONVERSATION',
       ctaValue: 'Comment your biggest challenge for a personalized reply',
       ctaReason: 'Drives comments to boost algorithm reach; conversation starter',
-      visualConcept: `Professional headshot + data visualization graphic showing 40% improvement`,
+      visualConcept: `Professional tournament director photo + data visualization graphic showing 40% player retention improvement`,
       visualDimensions: '1200x627 (article) / 1080x1080 (post)',
       format: 'IMAGE',
       platformNotes: 'Native document/article format performs best; tag relevant companies; 3-5 hashtags max',
       alternativeHooks: []
     },
     TWITTER: {
-      hook: `🧵 Thread: The truth about ${baseTopic} that nobody tells you`,
-      caption: `1/ ${baseTopic} is misunderstood by 90% of businesses.\n\n2/ Most think it's about [common misconception]. It's actually about [truth].\n\n3/ Here's the framework we use with clients:\n\n4/ Step 1: [Action]\n5/ Step 2: [Action]\n6/ Step 3: [Action]\n\n7/ Results: Client went from $0 to $10K/mo in 60 days.\n\n8/ Want the template? Retweet + Follow 👇\n\n#BusinessTips #Entrepreneurship #GrowthHacking #Thread`,
+      hook: `🧵 Thread: The truth about ${baseTopic} that nobody tells tournament organizers`,
+      caption: `1/ ${baseTopic} is misunderstood by 90% of sports event organizers.\n\n2/ Most think it's about [common misconception]. It's actually about [truth].\n\n3/ Here's the framework we use for ${eventName}:\n\n4/ Step 1: [Action]\n5/ Step 2: [Action]\n6/ Step 3: [Action]\n\n7/ Results: Player satisfaction went from 60% to 95% in 2 years.\n\n8/ Want the template? Retweet + Follow 👇\n\n#SportsEvents #BeachVolleyball #EventManagement #Thread`,
       cta: 'Retweet for template',
-      hashtags: '#BusinessTips #Entrepreneurship #GrowthHacking #Thread',
+      hashtags: '#SportsEvents #BeachVolleyball #EventManagement #Thread',
       ctaType: 'ENGAGEMENT',
       ctaValue: 'Retweet + Follow for DM template',
       ctaReason: 'Viral mechanic: retweet amplifies reach, follow builds audience',
@@ -65,72 +93,84 @@ function generatePlatformContent(strategy: StrategyName, _day: number, topic: st
     },
     TIKTOK: {
       hook: `POV: You finally cracked the code on ${baseTopic} 🤯`,
-      caption: `Stop overcomplicating ${baseTopic}! Here's the simple 3-step system that changed everything for our clients:\n\n1️⃣ [Step 1]\n2️⃣ [Step 2]  \n3️⃣ [Step 3]\n\nThe results speak for themselves 📈\n\n#BusinessTips #Entrepreneurship #GrowthHacks #SmallBusiness #Mindset`,
+      caption: `Stop overcomplicating ${baseTopic}! Here's the simple 3-step system that changed everything for ${eventName} players:\n\n1️⃣ [Step 1]\n2️⃣ [Step 2]  \n3️⃣ [Step 3]\n\nThe results speak for themselves 📈\n\n#${eventName.replace(/\s+/g, '')} #BeachVolleyball #PlayaDelCarmen #TournamentTips #SportsTips #BeachLife`,
       cta: 'Follow for Part 2!',
-      hashtags: '#BusinessTips #Entrepreneurship #GrowthHacks #SmallBusiness #Mindset #BusinessGrowth',
+      hashtags: `#${eventName.replace(/\s+/g, '')} #BeachVolleyball #PlayaDelCarmen #TournamentTips #SportsTips #BeachLife #MexicoEvents`,
       ctaType: 'ENGAGEMENT',
-      ctaValue: 'Follow for more business growth content',
+      ctaValue: 'Follow for more beach volleyball tournament content',
       ctaReason: 'Follow CTA builds audience for future content distribution',
       visualConcept: `Fast-paced: hook (0-3s) → problem (3-5s) → solution (5-15s) → results (15-20s) → CTA (20-30s)`,
       visualDimensions: '1080x1920 (9:16 vertical)',
       format: 'SHORT_VIDEO',
-      platformNotes: 'Vertical video; hook in first 3 seconds; trending audio; captions burned in; post 1-3pm or 7-9pm',
+      platformNotes: 'Vertical video; hook in first 3 seconds; trending beach audio; captions burned in; post 1-3pm or 7-9pm',
       alternativeHooks: []
     }
   };
   
-  // Strategy-specific adjustments
+  // Strategy-specific adjustments with personalization
   if (strategy === 'PROMOTE') {
-    platformContent.FACEBOOK.cta = 'Book Your Free Consultation';
+    platformContent.FACEBOOK.cta = 'Register for Tournament';
     platformContent.FACEBOOK.ctaType = 'DIRECT_LINK';
-    platformContent.FACEBOOK.ctaValue = 'https://calendly.com/example';
-    platformContent.FACEBOOK.ctaReason = 'Direct booking link for high-intent leads';
+    platformContent.FACEBOOK.ctaValue = 'https://playabeachvolleyball.com/register';
+    platformContent.FACEBOOK.ctaReason = 'Direct registration link for high-intent players';
     
-    platformContent.INSTAGRAM.cta = 'DM us "CONSULT"';
+    platformContent.INSTAGRAM.cta = 'DM us "REGISTER"';
     platformContent.INSTAGRAM.ctaType = 'KEYWORD';
-    platformContent.INSTAGRAM.ctaValue = 'CONSULT';
-    platformContent.INSTAGRAM.ctaReason = 'Triggers consultation booking automation via DM';
+    platformContent.INSTAGRAM.ctaValue = 'REGISTER';
+    platformContent.INSTAGRAM.ctaReason = 'Triggers registration link automation via DM';
     
-    platformContent.LINKEDIN.cta = 'Schedule a Call';
+    platformContent.LINKEDIN.cta = 'Register Your Team';
     platformContent.LINKEDIN.ctaType = 'DIRECT_LINK';
-    platformContent.LINKEDIN.ctaValue = 'https://calendly.com/example';
-    platformContent.LINKEDIN.ctaReason = 'Professional booking link for B2B leads';
+    platformContent.LINKEDIN.ctaValue = 'https://playabeachvolleyball.com/register';
+    platformContent.LINKEDIN.ctaReason = 'Professional registration link for team captains';
     
-    platformContent.TWITTER.cta = 'Reply "CALL" for details';
+    platformContent.TWITTER.cta = 'Reply "TEAM" for details';
     platformContent.TWITTER.ctaType = 'KEYWORD';
-    platformContent.TWITTER.ctaValue = 'CALL';
-    platformContent.TWITTER.ctaReason = 'Triggers DM with booking link';
+    platformContent.TWITTER.ctaValue = 'TEAM';
+    platformContent.TWITTER.ctaReason = 'Triggers DM with registration link';
     
-    platformContent.TIKTOK.cta = 'Link in bio for free strategy call';
+    platformContent.TIKTOK.cta = 'Link in bio to register your team';
     platformContent.TIKTOK.ctaType = 'DIRECT_LINK';
-    platformContent.TIKTOK.ctaValue = 'https://calendly.com/example';
+    platformContent.TIKTOK.ctaValue = 'https://playabeachvolleyball.com/register';
     platformContent.TIKTOK.ctaReason = 'Bio link is only clickable CTA on TikTok';
   } else if (strategy === 'ENGAGE') {
-    platformContent.FACEBOOK.cta = 'Share your thoughts!';
+    platformContent.FACEBOOK.cta = 'Share your tournament story!';
     platformContent.FACEBOOK.ctaType = 'KEYWORD';
-    platformContent.FACEBOOK.ctaValue = 'THOUGHTS';
+    platformContent.FACEBOOK.ctaValue = 'STORY';
     platformContent.FACEBOOK.ctaReason = 'Triggers automated response with discussion prompt';
     
-    platformContent.INSTAGRAM.cta = 'Vote in our poll!';
+    platformContent.INSTAGRAM.cta = 'Vote for your favorite moment!';
     platformContent.INSTAGRAM.ctaType = 'KEYWORD';
     platformContent.INSTAGRAM.ctaValue = 'VOTE';
     platformContent.INSTAGRAM.ctaReason = 'Triggers poll results via DM automation';
     
-    platformContent.LINKEDIN.cta = 'Comment your experience';
+    platformContent.LINKEDIN.cta = 'Comment your tournament experience';
     platformContent.LINKEDIN.ctaType = 'CONVERSATION';
-    platformContent.LINKEDIN.ctaValue = 'Share your biggest challenge with this topic';
+    platformContent.LINKEDIN.ctaValue = 'Share your favorite tournament memory';
     platformContent.LINKEDIN.ctaReason = 'Drives meaningful comments for algorithm boost';
     
-    platformContent.TWITTER.cta = 'Retweet if you agree';
+    platformContent.TWITTER.cta = 'Retweet if you love beach volleyball';
     platformContent.TWITTER.ctaType = 'ENGAGEMENT';
-    platformContent.TWITTER.ctaValue = 'RT + Follow for results';
+    platformContent.TWITTER.ctaValue = 'RT + Follow for tournament updates';
     platformContent.TWITTER.ctaReason = 'Viral mechanic amplifies reach';
     
-    platformContent.TIKTOK.cta = 'Comment your answer!';
+    platformContent.TIKTOK.cta = 'Comment your favorite tournament moment!';
     platformContent.TIKTOK.ctaType = 'ENGAGEMENT';
     platformContent.TIKTOK.ctaValue = 'Comment for personalized tip';
     platformContent.TIKTOK.ctaReason = 'Comments drive TikTok algorithm distribution';
   }
+  
+  // Apply prohibited topics filter
+  const prohibitedTerms = context.prohibitedTopics.toLowerCase().split(',').map(t => t.trim()).filter(t => t.length > 0);
+  
+  // Check if any content violates prohibited topics
+  Object.values(platformContent).forEach(content => {
+    const fullContent = `${content.hook} ${content.caption} ${content.cta} ${content.hashtags} ${content.visualConcept}`.toLowerCase();
+    const hasProhibited = prohibitedTerms.some(term => fullContent.includes(term));
+    if (hasProhibited) {
+      console.warn(`Prohibited topic detected in ${strategy} content, content may need review`);
+    }
+  });
   
   return platformContent;
 }
@@ -164,102 +204,80 @@ function getStrategyForDay(day: number): StrategyName {
   return result[day % result.length];
 }
 
-const TOPICS = [
-  'Building Trust Through Transparency',
-  'The Power of Consistent Branding',
-  'Customer Success Stories That Inspire',
-  'Industry Trends You Cannot Ignore',
-  'Maximizing Your Digital Presence',
-  'From Lead to Loyal Customer',
-  'Content That Converts',
-  'The Art of Storytelling in Business',
-  'Leveraging Social Proof Effectively',
-  'Smart Automation for Growth',
-  'Creating Memorable Brand Experiences',
-  'Data-Driven Decision Making',
-  'Building Community Around Your Brand',
-  'The Psychology of Pricing',
-  'Turning Followers into Advocates',
-  'Strategic Partnerships That Work',
-  'Crisis Management Essentials',
-  'Innovation in Service Delivery',
-  'Measuring What Matters',
-  'Scaling Without Losing Quality',
-  'The Future of Your Industry',
-  'Personal Branding for Founders',
-  'Customer Feedback Loops',
-  'Sustainable Business Practices',
-  'Effective Time Management',
-  'Negotiation Strategies That Win',
-  'Building a Referral Engine',
-  'Adapting to Market Changes',
-  'Leadership Lessons Learned',
-  'Your 30-Day Growth Plan'
-];
+// Generate personalized MOCK_POSTS based on workshop context
+function generateMockPosts(): ContentPost[] {
+  const context = getWorkshopContext();
+  const defaultContext = context || transformQuestionnaireToContext({});
+  
+  return Array.from({ length: 30 }, (_, i) => {
+    const day = i + 1;
+    const strategy = getStrategyForDay(i);
+    const strategyTopics = getTopicsForStrategy(strategy, defaultContext);
+    const topic = strategyTopics[i % strategyTopics.length] || `Day ${day} ${strategy} content`;
+    const date = new Date(2026, 9, day).toISOString().split('T')[0];
+    
+    // Get platform content with personalization
+    const platformContent = generatePersonalizedPlatformContent(strategy, day, topic, defaultContext);
+    
+    // Generate hook variations for the primary platform (Facebook)
+    const primary = platformContent.FACEBOOK;
+    const hookVariations = [
+      { id: `hook-${strategy}-FACEBOOK-curiosity`, text: `The secret to ${topic.toLowerCase()} that most ${defaultContext.targetAudience.split(' ').slice(0,2).join(' ')} miss`, approach: 'curiosity', isPrimary: true, reason: 'Opens a curiosity gap that drives clicks and saves' },
+      { id: `hook-${strategy}-FACEBOOK-problem`, text: `Struggling with ${topic.toLowerCase()}? You're not alone — here's the fix`, approach: 'problem', isPrimary: false, reason: 'Leads with the pain point to immediately resonate' },
+      { id: `hook-${strategy}-FACEBOOK-contrarian`, text: `Why everything you know about ${topic.toLowerCase()} might be wrong`, approach: 'contrarian', isPrimary: false, reason: 'Challenges assumptions to stop the scroll' },
+      { id: `hook-${strategy}-FACEBOOK-question`, text: `What if ${topic.toLowerCase()} could be 10x easier?`, approach: 'question', isPrimary: false, reason: 'Invites mental engagement and comments' }
+    ];
+    
+    let status: ContentStatus;
+    if (day <= 5) status = 'APPROVED';
+    else if (day <= 10) status = 'CLIENT_REVIEW';
+    else if (day <= 12) status = 'CHANGES_REQUESTED';
+    else if (day <= 15) status = 'SCHEDULED';
+    else if (day <= 18) status = 'PUBLISHED';
+    else if (day <= 20) status = 'REJECTED';
+    else if (day <= 25) status = 'GENERATED';
+    else status = 'DRAFT';
+    
+    return {
+      id: `post-${day}`,
+      clientId: 'demo-client-001',
+      date,
+      scheduledTime: new Date(2026, 9, day, 10, 0).toISOString(),
+      platform: 'FACEBOOK',
+      strategyId: `strategy-${strategy}`,
+      strategyName: strategy,
+      strategyColor: '#3B82F6',
+      format: FORMATS[day % FORMATS.length],
+      topic,
+      objective: `Drive ${strategy.toLowerCase()} engagement for ${defaultContext.eventName}`,
+      hook: primary.hook,
+      alternativeHooks: hookVariations.map(h => h.text),
+      caption: primary.caption,
+      shortCaption: primary.caption.substring(0, 120) + '...',
+      cta: primary.cta,
+      ctaType: primary.ctaType,
+      ctaValue: primary.ctaValue,
+      hashtags: primary.hashtags,
+      imagePrompt: `Professional photo showing ${topic.toLowerCase()}, ${defaultContext.eventLocation}, natural lighting, beach volleyball atmosphere`,
+      imageUrl: `https://images.unsplash.com/photo-${1500000000000 + day}?w=800`,
+      videoConcept: `Short video explaining ${topic.toLowerCase()} with animated graphics`,
+      videoScript: `Hook: ${primary.hook}\n\nBody: ${primary.caption}\n\nCTA: ${primary.cta}`,
+      firstComment: 'First! Thanks for sharing this valuable insight 🙌',
+      aiInstructions: `Use ${defaultContext.brandTone} tone. ${defaultContext.accuracyRequirements}`,
+      status,
+      clientNotes: status === 'CHANGES_REQUESTED' ? 'Please make the tone more conversational' : undefined,
+      revisionRequest: status === 'CHANGES_REQUESTED' ? 'Make it more conversational and less formal' : undefined,
+      approvedAt: status === 'APPROVED' || status === 'SCHEDULED' || status === 'PUBLISHED' ? new Date(2026, 9, day - 1, 14, 0).toISOString() : undefined,
+      publishedAt: status === 'PUBLISHED' ? new Date(2026, 9, day, 10, 0).toISOString() : undefined,
+      externalPostId: status === 'PUBLISHED' ? `fb_${Date.now()}_${day}` : undefined,
+      createdAt: new Date(2026, 9, 1, 9, 0).toISOString(),
+      updatedAt: new Date(2026, 9, day, 9, 0).toISOString(),
+      platformContent
+    };
+  });
+}
 
-const MOCK_POSTS: ContentPost[] = Array.from({ length: 30 }, (_, i) => {
-  const day = i + 1;
-  const strategy = getStrategyForDay(i);
-  const topic = TOPICS[i];
-  const date = new Date(2026, 9, day).toISOString().split('T')[0];
-  const platformContent = generatePlatformContent(strategy, day, topic);
-  
-  // Generate hook variations for the primary platform (Facebook)
-  const hookVariations = [
-    { id: `hook-${strategy}-FACEBOOK-curiosity`, text: `The secret to ${topic.toLowerCase()} that most business owners miss`, approach: 'curiosity', isPrimary: true, reason: 'Opens a curiosity gap that drives clicks and saves' },
-    { id: `hook-${strategy}-FACEBOOK-problem`, text: `Struggling with ${topic.toLowerCase()}? You're not alone — here's the fix`, approach: 'problem', isPrimary: false, reason: 'Leads with the pain point to immediately resonate' },
-    { id: `hook-${strategy}-FACEBOOK-contrarian`, text: `Why everything you know about ${topic.toLowerCase()} might be wrong`, approach: 'contrarian', isPrimary: false, reason: 'Challenges assumptions to stop the scroll' },
-    { id: `hook-${strategy}-FACEBOOK-question`, text: `What if ${topic.toLowerCase()} could be 10x easier?`, approach: 'question', isPrimary: false, reason: 'Invites mental engagement and comments' }
-  ];
-  const primary = platformContent.FACEBOOK;
-  
-  let status: ContentStatus;
-  if (day <= 5) status = 'APPROVED';
-  else if (day <= 10) status = 'CLIENT_REVIEW';
-  else if (day <= 12) status = 'CHANGES_REQUESTED';
-  else if (day <= 15) status = 'SCHEDULED';
-  else if (day <= 18) status = 'PUBLISHED';
-  else if (day <= 20) status = 'REJECTED';
-  else if (day <= 25) status = 'GENERATED';
-  else status = 'DRAFT';
-  
-  return {
-    id: `post-${day}`,
-    clientId: 'demo-client-001',
-    date,
-    scheduledTime: new Date(2026, 9, day, 10, 0).toISOString(),
-    platform: 'FACEBOOK',
-    strategyId: `strategy-${strategy}`,
-    strategyName: strategy,
-    strategyColor: '#3B82F6',
-    format: FORMATS[day % FORMATS.length],
-    topic,
-    objective: `Drive ${strategy.toLowerCase()} engagement and build brand authority`,
-    hook: primary.hook,
-    alternativeHooks: hookVariations.map(h => h.text),
-    caption: primary.caption,
-    shortCaption: primary.caption.substring(0, 120) + '...',
-    cta: primary.cta,
-    ctaType: primary.ctaType,
-    ctaValue: primary.ctaValue,
-    hashtags: primary.hashtags,
-    imagePrompt: `Professional photo showing ${topic.toLowerCase()}, modern office setting, natural lighting, brand colors`,
-    imageUrl: `https://images.unsplash.com/photo-${1500000000000 + day}?w=800`,
-    videoConcept: `Short video explaining ${topic.toLowerCase()} with animated graphics`,
-    videoScript: `Hook: ${primary.hook}\n\nBody: ${primary.caption}\n\nCTA: ${primary.cta}`,
-    firstComment: 'First! Thanks for sharing this valuable insight 🙌',
-    aiInstructions: 'Keep tone professional but approachable. Use brand colors in visuals.',
-    status,
-    clientNotes: status === 'CHANGES_REQUESTED' ? 'Please make the tone more conversational' : undefined,
-    revisionRequest: status === 'CHANGES_REQUESTED' ? 'Make it more conversational and less formal' : undefined,
-    approvedAt: status === 'APPROVED' || status === 'SCHEDULED' || status === 'PUBLISHED' ? new Date(2026, 9, day - 1, 14, 0).toISOString() : undefined,
-    publishedAt: status === 'PUBLISHED' ? new Date(2026, 9, day, 10, 0).toISOString() : undefined,
-    externalPostId: status === 'PUBLISHED' ? `fb_${Date.now()}_${day}` : undefined,
-    createdAt: new Date(2026, 9, 1, 9, 0).toISOString(),
-    updatedAt: new Date(2026, 9, day, 9, 0).toISOString(),
-    platformContent
-  };
-});
+const MOCK_POSTS: ContentPost[] = generateMockPosts();
 
 MOCK_POSTS.forEach(post => {
   const strategyColors: Record<string, string> = {
@@ -429,7 +447,7 @@ export const dataService = {
     }
     return apiRequest<any>('/questionnaire');
   },
-
+  
   saveQuestionnaireAnswer: async (responseId: string, response: string) => {
     if (demoMode) {
       return { id: responseId, response, completed: true, updatedAt: new Date().toISOString() };
@@ -439,7 +457,7 @@ export const dataService = {
       body: JSON.stringify({ response })
     });
   },
-
+  
   submitQuestionnaire: async (month: string) => {
     if (demoMode) {
       // Simulate job creation
@@ -450,7 +468,7 @@ export const dataService = {
       body: JSON.stringify({ month })
     });
   },
-
+  
   // Generation jobs
   getGenerationJob: async (jobId: string) => {
     if (demoMode) {
@@ -462,7 +480,7 @@ export const dataService = {
     }
     return apiRequest<any>(`/generation-jobs/${jobId}`);
   },
-
+  
   // Client profile
   getClientProfile: async () => {
     if (demoMode) {
@@ -477,7 +495,7 @@ export const dataService = {
     }
     return apiRequest<any>('/client/profile');
   },
-
+  
   updateClientProfile: async (updates: Partial<any>) => {
     if (demoMode) {
       return { ...updates, updatedAt: new Date().toISOString() };
