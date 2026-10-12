@@ -1,13 +1,14 @@
 // Auth Context for Frontend
-// Manages authentication state and API calls
+// Integrates with Clerk for authentication and backend API for client membership
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth as useClerkAuth, useUser } from '@clerk/react';
 
 interface User {
   issuer: string;
   subject: string;
   email?: string;
-  name?: string;
+  name?: string | null;
 }
 
 interface ClientMembership {
@@ -44,8 +45,6 @@ interface AuthContextType extends AuthState {
   login: (redirectUrl?: string) => void;
   logout: () => void;
   refreshProfile: () => Promise<void>;
-  setDemoMode: (enabled: boolean) => void;
-  isDemoMode: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -60,9 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     capabilities: {}
   });
   
-  const [isDemoMode, setIsDemoMode] = useState(true);
+  const { isLoaded, isSignedIn, signOut } = useClerkAuth();
+  const { user: clerkUser } = useUser();
 
   const fetchAuthState = useCallback(async () => {
+    if (!isSignedIn) {
+      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
+      return;
+    }
+
     try {
       const response = await fetch('/api/me', {
         credentials: 'include'
@@ -83,23 +88,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Auth fetch failed:', error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
     }
-  }, []);
+  }, [isSignedIn]);
 
   useEffect(() => {
-    fetchAuthState();
-  }, [fetchAuthState]);
+    if (isLoaded) {
+      if (isSignedIn) {
+        fetchAuthState();
+      } else {
+        setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
+      }
+    }
+  }, [isLoaded, isSignedIn, fetchAuthState]);
+
+  // Sync Clerk user info with our user state
+  useEffect(() => {
+    if (clerkUser && isSignedIn) {
+      setState(prev => ({
+        ...prev,
+        user: {
+          issuer: 'clerk',
+          subject: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress,
+          name: clerkUser.fullName || clerkUser.firstName || null,
+        },
+        isAuthenticated: true,
+      }));
+    } else if (!isSignedIn) {
+      setState(prev => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        membership: null,
+        profile: null,
+      }));
+    }
+  }, [clerkUser, isSignedIn]);
 
   const login = (redirectUrl?: string) => {
-    // Integrate with your auth provider
-    // Example for Clerk: window.location.href = `/sign-in?redirect_url=${redirectUrl || '/app'}`;
-    // Example for NextAuth: signIn('provider', { callbackUrl: redirectUrl || '/app' });
-    window.location.href = `/auth/login?redirect=${encodeURIComponent(redirectUrl || '/app')}`;
+    window.location.href = `/sign-in?redirect_url=${encodeURIComponent(redirectUrl || '/app')}`;
   };
 
   const logout = async () => {
     try {
+      await signOut();
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
       console.error('Logout failed:', error);
@@ -119,14 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchAuthState();
   };
 
-  const setDemoMode = (enabled: boolean) => {
-    setIsDemoMode(enabled);
-  };
-
   return (
     <AuthContext.Provider value={{
       isAuthenticated: state.isAuthenticated,
-      isLoading: state.isLoading,
+      isLoading: state.isLoading || !isLoaded,
       user: state.user,
       membership: state.membership,
       profile: state.profile,
@@ -134,8 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       refreshProfile,
-      setDemoMode,
-      isDemoMode
     }}>
       {children}
     </AuthContext.Provider>
@@ -148,10 +175,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
-}
-
-// Demo mode check
-export function useDemoMode() {
-  const { isDemoMode } = useAuth();
-  return isDemoMode;
 }

@@ -5,7 +5,7 @@ const STRATEGY_ORDER: StrategyName[] = ['EDUCATE', 'ENGAGE', 'AUTHORITY', 'STORY
 const FORMATS: ContentFormat[] = ['IMAGE', 'CAROUSEL', 'SHORT_VIDEO', 'REEL', 'TEXT', 'STORY', 'POLL', 'QUESTION'];
 
 // Get workshop content context from localStorage (if available)
-function getWorkshopContext(): WorkshopContentContext | null {
+export function getWorkshopContext(): WorkshopContentContext | null {
   if (typeof window === 'undefined') return null;
   
   try {
@@ -205,7 +205,7 @@ function getStrategyForDay(day: number): StrategyName {
 }
 
 // Generate personalized MOCK_POSTS based on workshop context
-function generateMockPosts(): ContentPost[] {
+export function generateMockPosts(): ContentPost[] {
   const context = getWorkshopContext();
   const defaultContext = context || transformQuestionnaireToContext({});
   
@@ -504,5 +504,7 @@ export const dataService = {
       method: 'PATCH',
       body: JSON.stringify(updates)
     });
-  }
+  },
+
+  generateMockPosts,
 };

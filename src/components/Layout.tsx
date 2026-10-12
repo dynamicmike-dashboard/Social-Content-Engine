@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Calendar, FileText, Target, Building2, CheckCircle2, LogOut, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Calendar, FileText, Target, Building2, CheckCircle2, LogOut, Briefcase, BookOpen } from 'lucide-react';
 import { Footer } from './Footer';
 import { useAuth } from '../hooks/useAuth';
 
@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { name: 'Strategy', icon: Target },
   { name: 'Business Profile', icon: Building2 },
   { name: 'Approvals', icon: CheckCircle2 },
+  { name: 'Prompt Library', icon: BookOpen },
 ];
 
 interface LayoutProps {
@@ -25,19 +26,13 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children, currentPage, setCurrentPage, user }: LayoutProps) => {
-  const { logout, isDemoMode, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D2D2D] font-sans flex">
       <nav className="w-64 border-r border-gray-200 p-6 flex flex-col">
         <div className="mb-10">
           <h1 className="text-xl font-bold mb-2 tracking-tight text-[#7FB3D5]">Content Engine</h1>
-          {isDemoMode && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-              Demo Mode
-            </span>
-          )}
         </div>
         
         <div className="space-y-4 mb-8">
@@ -78,7 +73,7 @@ export const Layout = ({ children, currentPage, setCurrentPage, user }: LayoutPr
           </div>
         )}
 
-        {!isAuthenticated && !isDemoMode && (
+        {!isAuthenticated && (
           <div className="flex-1 flex flex-col justify-end">
             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 mb-4 text-center">
               <p className="text-sm text-gray-500">Not signed in</p>
