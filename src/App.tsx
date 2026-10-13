@@ -6,9 +6,11 @@ import { CalendarView } from './components/CalendarView';
 import { BusinessProfile } from './components/BusinessProfile';
 import { StrategyOverview } from './components/StrategyOverview';
 import { Approvals } from './components/Approvals';
-import { LoginPage } from './components/LoginPage';
+import { SignUpPage } from './components/SignUpPage';
+import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { SalesIntro } from './components/SalesIntro';
 import { PromptLibrary } from './components/PromptLibrary';
+import { SalesPage } from './components/SalesPage';
 
 function AppContent() {
   const { isAuthenticated, isLoading, membership } = useAuth();
@@ -47,9 +49,16 @@ function AppContent() {
     );
   }
 
-  // Show login page if not authenticated
+  // Show auth pages for unauthenticated users
   if (!isAuthenticated) {
-    return <LoginPage />;
+    const path = window.location.pathname;
+    if (path === '/auth/sign-up') {
+      return <SignUpPage />;
+    }
+    if (path === '/auth/verify-email') {
+      return <VerifyEmailPage />;
+    }
+    return <SalesPage />;
   }
 
   const renderPage = () => {

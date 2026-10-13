@@ -1,14 +1,13 @@
 // Auth Context for Frontend
-// Integrates with Clerk for authentication and backend API for client membership
+// Uses custom Teable-based authentication
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth as useClerkAuth, useUser } from '@clerk/react';
 
 interface User {
-  issuer: string;
-  subject: string;
-  email?: string;
-  name?: string | null;
+  id: string;
+  email: string;
+  name: string | null;
+  emailVerified: boolean;
 }
 
 interface ClientMembership {
@@ -58,18 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile: null,
     capabilities: {}
   });
-  
-  const { isLoaded, isSignedIn, signOut } = useClerkAuth();
-  const { user: clerkUser } = useUser();
 
   const fetchAuthState = useCallback(async () => {
-    if (!isSignedIn) {
-      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
-      return;
-    }
-
     try {
-      const response = await fetch('/api/me', {
+      const response = await fetch('/api/auth/me', {
         credentials: 'include'
       });
       
@@ -79,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: data.authenticated,
           isLoading: false,
           user: data.user || null,
-          membership: data.client || null,
+          membership: data.membership || null,
           profile: data.profile || null,
           capabilities: data.capabilities || {}
         });
@@ -90,41 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Auth fetch failed:', error);
       setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
     }
-  }, [isSignedIn]);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded) {
-      if (isSignedIn) {
-        fetchAuthState();
-      } else {
-        setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
-      }
-    }
-  }, [isLoaded, isSignedIn, fetchAuthState]);
-
-  // Sync Clerk user info with our user state
-  useEffect(() => {
-    if (clerkUser && isSignedIn) {
-      setState(prev => ({
-        ...prev,
-        user: {
-          issuer: 'clerk',
-          subject: clerkUser.id,
-          email: clerkUser.primaryEmailAddress?.emailAddress,
-          name: clerkUser.fullName || clerkUser.firstName || null,
-        },
-        isAuthenticated: true,
-      }));
-    } else if (!isSignedIn) {
-      setState(prev => ({
-        ...prev,
-        user: null,
-        isAuthenticated: false,
-        membership: null,
-        profile: null,
-      }));
-    }
-  }, [clerkUser, isSignedIn]);
+    fetchAuthState();
+  }, [fetchAuthState]);
 
   const login = (redirectUrl?: string) => {
     window.location.href = `/sign-in?redirect_url=${encodeURIComponent(redirectUrl || '/app')}`;
@@ -132,7 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await signOut();
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
       console.error('Logout failed:', error);
@@ -155,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       isAuthenticated: state.isAuthenticated,
-      isLoading: state.isLoading || !isLoaded,
+      isLoading: state.isLoading,
       user: state.user,
       membership: state.membership,
       profile: state.profile,

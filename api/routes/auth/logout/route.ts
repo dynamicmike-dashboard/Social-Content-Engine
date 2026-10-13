@@ -1,27 +1,72 @@
 // POST /api/auth/logout
-// Clears the Clerk session cookie
+// Logout user by deleting session
 
-export async function POST(request: Request) {
+import { createTeableService } from '../../../../teable/service';
+import { hashPassword } from '../../../lib/auth/password';
+
+export async function POST(request: Request): Promise<Response> {
   try {
-    // Clear the Clerk session cookie
-    // Clerk uses __session cookie
-    const response = new Response(
-      JSON.stringify({ success: true, message: 'Logged out successfully' }),
+    // Get session token from cookie
+    const cookieHeader = request.headers.get('Cookie');
+    if (!cookieHeader) {
+      return Response.json(
+        { success: false, error: 'Not logged in', errorCode: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
+    const cookies = cookieHeader.split(';').map(c => c.trim());
+    let sessionToken: string | null = null;
+    
+    for (const cookie of cookies) {
+      if (cookie.startsWith('session=')) {
+        sessionToken = cookie.split('=')[1];
+        break;
+      }
+    }
+
+    if (sessionToken) {
+      const teable = createTeableService();
+      const { hashPassword } = await import('../../../lib/auth/password');
+      const sessionTokenHash = await hashPassword(sessionToken);
+
+      // Find and delete session
+      const sessions = await teable.listRecords('User Sessions', {
+        filter: {
+          conjunction: 'and',
+          filterSet: [
+            { fieldId: 'session_token_hash', operator: 'is', value: sessionTokenHash }
+          ]
+        }
+      });
+
+      if (sessions.records.length > 0) {
+        await teable.deleteRecord('User Sessions', sessions.records[0].id);
+      }
+    }
+
+    // Clear session cookie
+    const cookie = 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+
+    return Response.json(
+      { success: true, message: 'Logged out successfully' },
       {
-        status: 200,
         headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie': '__session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
-        },
+          'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+        }
       }
     );
-    
-    return response;
+
   } catch (error) {
-    console.error('Error in POST /api/auth/logout:', error);
+    console.error('Logout error:', error);
+    // Even if there's an error, clear the cookie
     return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { success: true, message: 'Logged out' },
+      {
+        headers: {
+          'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+        }
+      }
     );
   }
 }
